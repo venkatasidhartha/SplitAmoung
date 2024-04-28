@@ -1,6 +1,9 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser,BaseUserManager
 from django.utils.translation import gettext_lazy as _
+from core.utility import extract_username_from_email
 # Create your models here.
 
 class UserManager(BaseUserManager):
@@ -34,3 +37,25 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
     objects = UserManager()
 
+
+
+class Profile(models.Model):
+    email = models.EmailField(_("email address"), unique=True,blank=False)
+    name = models.CharField(max_length=255,blank=False)
+    phone = models.CharField(max_length=50,blank=True)
+    user = models.OneToOneField(User,on_delete=models.CASCADE,unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.email
+    
+@receiver(post_save,sender=User)
+def create_profile(sender,instance,created,**kwards):
+    user = instance
+    if created and not user.is_superuser and not user.is_staff:
+        profile = Profile.objects.create(
+            email=user.email,
+            name=extract_username_from_email(user.email),
+            user=user
+        )
