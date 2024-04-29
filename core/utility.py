@@ -1,4 +1,6 @@
-
+import traceback
+from django.http import JsonResponse
+from django.conf import settings
 
 def extract_username_from_email(email):
     """
@@ -12,3 +14,20 @@ def extract_username_from_email(email):
     """
     username = email.split('@')[0]
     return username
+
+
+def capture_error(function):
+    def executor(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        except Exception as e:
+            print(e.__str__())
+            response = {
+                "error":e.__str__(),
+                "message":"error",
+                "status_code":400
+            }
+            if settings.DEBUG:
+                response["exception"] = traceback.format_exc()
+            return JsonResponse(response,status=400,safe=False)
+    return executor
