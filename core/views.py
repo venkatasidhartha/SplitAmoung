@@ -4,13 +4,16 @@ from rest_framework.permissions import AllowAny,IsAuthenticated
 from core.utility import capture_error
 # Create your views here.
 
-# importing request
+# Importing Request
+from core.request.signup import SignupRequest
 from core.request.profile import ProfileRequest 
 
-# importing service
-from core.common.response import CommonResponse
+# Importing Service
+from core.service.User import UserService
 from core.service.Profile import ProfileService
 
+# Importing Common Response
+from core.common.response import CommonResponse
 
 
 
@@ -24,6 +27,17 @@ user = User.objects.create(email="user1@user.com")
 user.password = make_password('admin')
 user.save()
 """
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@capture_error
+def signup(request):
+    request_data = SignupRequest(request.data)
+    service = UserService()
+    user_response = service.create(request_data)
+    response = CommonResponse(message="created successfully",data=user_response.get_obj(),status_code=201).get_response()
+    return response
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
