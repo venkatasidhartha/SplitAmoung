@@ -1,18 +1,18 @@
 
 
-class Request:
+class ProfileRequest:
     email = None
     name = None
     phone = None
 
-    def __init__(self,request) -> None:
-        if "email" not in request:
+    def __init__(self,data) -> None:
+        if "email" not in data:
             raise Exception("email is missing")
-        self.email = request["email"]
-        if "name" in request:
-            self.name = request["name"]
-        if "phone" in request:
-            self.phone = request["phone"]
+        self.email = data["email"]
+        if "name" in data:
+            self.name = data["name"]
+        if "phone" in data:
+            self.phone = data["phone"]
     
     def get_email(self):
         return self.email

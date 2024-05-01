@@ -25,9 +25,9 @@ def capture_error(function):
             response = {
                 "error":e.__str__(),
                 "message":"error",
-                "status_code":400
+                "status_code":500
             }
             if settings.DEBUG:
                 response["exception"] = traceback.format_exc()
-            return JsonResponse(response,status=400,safe=False)
+            return JsonResponse(response,status=500,safe=False)
     return executor
