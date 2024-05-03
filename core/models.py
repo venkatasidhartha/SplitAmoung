@@ -43,6 +43,7 @@ class Profile(models.Model):
     email = models.EmailField(_("email address"), unique=True,blank=False)
     name = models.CharField(max_length=255,blank=False)
     phone = models.CharField(max_length=50,blank=True)
+    profile_pic = models.IntegerField(blank=True,null=True)
     user = models.OneToOneField(User,on_delete=models.CASCADE,unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -59,3 +60,14 @@ def create_profile(sender,instance,created,**kwards):
             name=extract_username_from_email(user.email),
             user=user
         )
+
+class S3_File(models.Model):
+    url = models.URLField(max_length=255,blank=False,null=False) 
+    table_name = models.CharField(max_length=100,blank=False,null=False)
+    table_field = models.CharField(max_length=100,blank=False,null=False)
+    user_id = models.IntegerField(blank=False,null=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return self.table_name

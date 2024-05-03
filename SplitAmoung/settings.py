@@ -11,6 +11,18 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Importing Environment Variables 
+AWS_ENABLE=os.getenv("AWS_ENABLE") == 'True'
+AWS_URL = os.getenv("AWS_URL")
+S3_BUCKETNAME = os.getenv("S3_BUCKETNAME")
+S3_ACCESSKEY = os.getenv("S3_ACCESSKEY")
+S3_SECRETKEY = os.getenv("S3_SECRETKEY")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
