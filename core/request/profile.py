@@ -22,4 +22,3 @@ class ProfileRequest:
     
     def get_phone(self):
         return self.phone
-    

@@ -59,3 +59,14 @@ def update_profile(request):
     profile_response = service.update(request_data,request.user)
     response = CommonResponse(message="success",data=profile_response.get_dict()).get_response()
     return response
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@capture_error
+def upload_profile_pic(request):
+    if "image" not in request.FILES:
+        raise ValueError("image is requied")
+    service = ProfileService()
+    profile_response = service.uploadProfilepic(request)
+    response = CommonResponse(message="success",data=profile_response.get_dict()).get_response()
+    return response

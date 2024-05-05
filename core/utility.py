@@ -24,10 +24,14 @@ def capture_error(function):
             print(e.__str__())
             response = {
                 "error":e.__str__(),
-                "message":"error",
+                "message":"failed",
                 "status_code":500
             }
             if settings.DEBUG:
                 response["exception"] = traceback.format_exc()
             return JsonResponse(response,status=500,safe=False)
     return executor
+
+def extract_file_extenstion(filename):
+    extrnstion = filename.split(".")[-1]
+    return extrnstion
