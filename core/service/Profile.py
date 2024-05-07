@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.http import HttpResponse
 from core import models
 from core.response.profile import ProfileResponse
 from core.file_extensions import Extensions
@@ -37,29 +38,30 @@ class ProfileService:
 
     def uploadProfilepic(self, request):
         file_obj = request.FILES["image"]
-        user_obj = request.user
-        module_name = request.resolver_match.func.__module__
-        app_name = module_name.split(".")[0]
-        profile = models.Profile.objects.get(user__id=user_obj.id)
+        profile = models.Profile.objects.get(user__id=request.user.id)
         file_name = file_obj.name
         SupportedimagesExtension = Extensions().image
         if extract_file_extenstion(file_name) not in SupportedimagesExtension:
             raise Exception("Unsupported file")
         fileservice = FileService()
-        s3obj = fileservice.upload(
-            user_id=user_obj.id,
-            app_name=app_name,
+        s3obj = fileservice.uploadToS3(
+            request=request,
+            key="image",
             table_name="Profile",
             table_field="profile_pic_s3",
-            file=file_obj,
-            path_to_store=f"{profile.email}/profile/{str(uuid4())}/{file_name}",
+            path_to_store=f"{profile.email}/profile/",
         )
         profile.profile_pic_s3 = s3obj.id
         profile.save()
-
         response = ProfileResponse()
         response.set_message("uploaded")
         response.set_s3_id(s3obj.id) 
         response.set_s3_url(s3obj.url)
         return response
+
+    def getProfilePic(self,user):
+        profile = models.Profile.objects.get(user__id=user.id)
+        fileservice = FileService()
+        file_content = fileservice.get_s3File(profile.profile_pic_s3)
+        return file_content
 

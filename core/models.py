@@ -63,6 +63,8 @@ def create_profile(sender,instance,created,**kwards):
 
 class S3_File(models.Model):
     url = models.URLField(max_length=255,blank=False,null=False) 
+    file_path = models.CharField(max_length=255,blank=False,null=False)
+    file_name = models.CharField(max_length=255,blank=False,null=False) 
     app_name = models.CharField(max_length=100,blank=False,null=False)
     table_name = models.CharField(max_length=100,blank=False,null=False)
     table_field = models.CharField(max_length=100,blank=False,null=False)

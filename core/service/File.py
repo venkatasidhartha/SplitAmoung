@@ -2,9 +2,10 @@ import boto3
 import io
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.base import ContentFile
+from django.http import HttpResponse
 from django.conf import settings
 from core.models import S3_File
-
+from uuid import uuid4
 
 class FileService:
     """
@@ -26,77 +27,68 @@ class FileService:
         object_url = f"{s3url}/{bucket_name}/{path_to_store}"
         return object_url
 
-    def upload(
+    def uploadToS3(
         self,
-        user_id: int = None,
-        app_name: str = None,
+        request=None,
+        key:str=None,
         table_name: str = None,
         table_field: str = None,
-        file=None,
         path_to_store: str = None,
     ):
         """
-        user_id : User ID: Send the user ID as an integer value using the user_id parameter.
-            This parameter is required and ensures that the file upload is associated with a specific user in the system.
+        Function Description:
+        This function performs a specific action using the provided parameters.
 
-        app_name : Application Name: Specify the application name using the app_name parameter. 
-            This parameter helps in identifying the application context in which the file upload is performed.
-            For example, you can specify the application name as "core" if the upload is related to the core functionalities of 
-            the system.
-
-        table_name : Table Name: Provide the table name using the table_name parameter. 
-            This parameter indicates the name of the table or entity to which the file is attached. 
-            It helps in tracking the files based on the entities they are associated with. 
-            For instance, if the file is related to user profiles, you can specify the table name as "Profile".
-        
-        
-        table_field : Table Field: Specify the table field name using the table_field parameter. 
-            This parameter represents the specific field within the table where the file is stored or referenced. 
-            It facilitates easy retrieval and management of files associated with different fields. For example, 
-            if the file is a user's profile picture, you can specify the table field as "profile_pic".
-        
-        file : File: Send the file object using the file parameter. 
-            You can retrieve the file object from the request using request.FILES.get("image"). 
-            This parameter contains the actual file data that you want to upload to the system.
-        
-        path_to_store : Path to Store: Specify the path where you want to store the file along with the file name 
-            using the path_to_store parameter. This parameter allows you to specify the directory structure and file name for 
-            storing the uploaded file. For example, you can specify the path as "profile/file.txt" 
-            to store the file in the "profile" directory with the name "file.txt".
+        Parameters:
+        - request: Django request object. (default=None)
+                The Django request object associated with the current HTTP request.
+        - key: str. (default=None)
+            The file key used to access the file. For example, 'image'.
+        - table_name: str. (default=None)
+                    The name of the table where the file will be stored. For example, 'S3 Upload'.
+        - table_field: str. (default=None)
+                    The name of the field in the table where the file will be stored. For example, 's3 file'.
+        - path_to_store: str. (default=None)
+                        The path in the storage system where the file will be stored. For example, '/user/files'.
         """
         if not settings.AWS_ENABLE:
             raise ValueError("Can't upload to S3. S3 is turned off")
-        if not user_id:
-            raise ValueError("user_id is required")
-        if not app_name:
-            raise ValueError("app_name is required")
+        if not request:
+            raise ValueError("request is required")
+        if not key:
+            raise ValueError("key is required")
         if not table_name:
             raise ValueError("table_name is required")
         if not table_field:
             raise ValueError("table_field is required")
         if not table_field:
             raise ValueError("table_field is required")
-        if not file:
-            raise ValueError("file is required")
         if not path_to_store:
             raise ValueError("path_to_store is required")
-
+        file = request.FILES[key]
+        user_id = request.user.id
+        module_name = request.resolver_match.func.__module__
+        app_name = module_name.split(".")[0]
+        file_name = file.name
+        make_path = ""
+        for path in path_to_store.split("/"):
+            if path:
+                make_path += path+"/"
+        make_path+= f"{str(uuid4())}/{file_name}"
         buffer = io.BytesIO()
         for chunk in file.chunks():
             buffer.write(chunk)
         buffer.seek(0)
         content_file = ContentFile(buffer.getvalue())
         in_memory_file = InMemoryUploadedFile(
-            content_file, None, path_to_store, None, None, None
+            content_file, None, make_path, None, None, None
         )
-        s3ObjectUrl = self.__s3_upload(in_memory_file, path_to_store)
+        s3ObjectUrl = self.__s3_upload(in_memory_file, make_path)
         url = s3ObjectUrl
-        app_name = app_name
-        table_name = table_name
-        table_field = table_field
-        user_id = user_id
         s3file_model = S3_File.objects.create(
             url=url,
+            file_path=make_path,
+            file_name=file_name,
             app_name=app_name,
             table_name=table_name,
             table_field=table_field,
@@ -104,3 +96,36 @@ class FileService:
         )
         s3file_model.save()
         return s3file_model
+
+
+
+
+    def get_s3File(self, s3_id):
+        """
+        This function will return the http response of the file directly
+        """
+        if not settings.AWS_ENABLE:
+            raise ValueError("Can't upload to S3. S3 is turned off")
+        if not s3_id:
+            raise ValueError("s3_id is required")
+        s3_object = S3_File.objects.get(pk=s3_id)
+        s3url = settings.AWS_URL
+        bucket_name = settings.S3_BUCKETNAME
+        access_key = settings.S3_ACCESSKEY
+        secret_key = settings.S3_SECRETKEY
+        s3_client = boto3.client(
+            "s3",
+            endpoint_url=s3url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+        try:
+            response = s3_client.get_object(Bucket=bucket_name, Key=s3_object.file_path)
+            file_content = response["Body"].read()
+            if file_content:
+                response = HttpResponse(file_content, content_type='application/octet-stream')
+                response['Content-Disposition'] = f'attachment; filename="{s3_object.file_name}"'
+                return response
+        except Exception as e:
+            raise Exception("File not found or error occurred while downloading.")
+

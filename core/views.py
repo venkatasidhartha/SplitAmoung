@@ -70,3 +70,10 @@ def upload_profile_pic(request):
     profile_response = service.uploadProfilepic(request)
     response = CommonResponse(message="success",data=profile_response.get_dict()).get_response()
     return response
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@capture_error
+def get_profile_pic(request):
+    service = ProfileService()
+    return service.getProfilePic(request.user) 
